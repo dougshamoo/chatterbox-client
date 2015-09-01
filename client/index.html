@@ -16,7 +16,11 @@
   <body>
     <div id="main">
       <h1>chatterbox</h1>
-      <textarea id="inputMessage"></textarea>
+      <div id="roomsContainer">
+        <ul id="rooms"></ul>
+      </div>
+      <textarea id="inputMessage" placeholder="Message"></textarea>
+      <textarea id="inputRoom" placeholder="Room"></textarea>
       <button id="submitMessage">Submit</button>
       <button id="refreshButton">Refresh</button>
       <div id="messageContainer"></div>

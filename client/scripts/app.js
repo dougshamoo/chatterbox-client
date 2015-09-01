@@ -1,5 +1,5 @@
-// YOUR CODE HERE:
-
+var rooms = [];
+var currentRoom = null;
 var url = 'https://api.parse.com/1/classes/chatterbox';
 var message = {
   username: 'somebody',
@@ -8,27 +8,19 @@ var message = {
 };
 var responseData = null;
 
-// it begins......
 $(document).ready(function() {
-
-
   $('#refreshButton').on('click', function() {
     refreshMessageList();
   });
-
   $('#submitMessage').on('click', function() {
     var text = $('#inputMessage').val();
-    console.log("text: " + text);
     postMessage({
       username: 'the cat',
       text: text,
       roomname: 'the room'
     });
-
   });
-
   getMessages();
-
 });
 
 var refreshMessageList = function() {
@@ -37,20 +29,38 @@ var refreshMessageList = function() {
 };
 
 function escapeHtml(text) {
-  return text.replace(/[\"&<>]/g, function (a) {
-    return { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' }[a];
-  });
+  // return text.replace(/[\"&<>]/g, function (a) {
+  //   return { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' }[a];
+  // });
+  return _.escape(text);
 }
 
-var updateDomWithMessage = function(data) {
+var updateDomWithMessage = function(data, currentRoom) {
   var results = data.results;
+  // _.filter ,
+  console.log('results before filter');
+  console.log(results);
+  if (currentRoom !== null) {
+    results = _.filter(results, function(item) {
+      return item.roomname===currentRoom;
+    });
+  }
+  console.log('results after filter');
+  console.log(results);
+
+  $('#messageContainer').empty();
+
   _.each(results, function(item, index, coll) {
-    if(item.username !== undefined){
-      var escapedUser = escapeHtml(item.username);
-    }
-    if(item.text !== undefined) {
-      var escapedText = escapeHtml(item.text);
-    }
+
+    if(item.username === undefined || item.username === null) return;
+    if(item.text === undefined || item.text === null) return;
+    if(item.roomname === undefined || item.roomname === null) return;
+    if(item.createdAt === undefined || item.createdAt === null) return;
+
+
+    var escapedUser = escapeHtml(item.username);
+    var escapedText = escapeHtml(item.text);
+    var escapedRoom = escapeHtml(item.roomname);
     var escapedTimestamp = escapeHtml(item.createdAt);
     var formattedTimestamp = moment(escapedTimestamp).fromNow();
 
@@ -59,9 +69,36 @@ var updateDomWithMessage = function(data) {
         '<p>'+ 'Username: ' + escapedUser+'</p>'+
         '<p>' + 'Text: ' +escapedText+'</p>'+
         '<p>' + 'Timestamp: ' + formattedTimestamp + '</p>' +
+        '<p>' + 'Room: ' + escapedRoom + '</p>' +
       '</div>');
   });
+};
 
+var updateDomWithRooms = function(data) {
+  var results = data.results;
+  _.each(results, function(item, index, coll) {
+    if (item.roomname) {
+      rooms.push(item.roomname);
+    }
+  });
+  rooms = _.uniq(rooms);
+  var $rooms = $('#rooms');
+  $rooms.empty();
+  _.each(rooms, function(item, index, coll) {
+    if(_.contains(item, '4chan')){
+      var escapedRoom = escapeHtml(item);
+    }
+    $rooms.append($(
+      '<li class="room">' +
+        '<button>' +
+          //escapedRoom +
+        item+
+        '</button>' +
+      '</li>'));
+    if (item === currentRoom) {
+      $('.room > button').last().addClass('current');
+    }
+  });
 };
 
 var getMessages = function() {
@@ -72,7 +109,19 @@ var getMessages = function() {
       contentType: 'application/json',
       success: function (data) {
         console.log('chatterbox: Messages retrieved');
-        updateDomWithMessage(data);
+        updateDomWithRooms(data);
+        $('.room > button').on('click', function() {
+          if (currentRoom === $(this).text()) {
+            currentRoom = null;
+            $(this).removeClass('current');
+          }
+          else {
+            currentRoom = $(this).text();
+            $(this).addClass('current');
+          }
+          getMessages();
+        });
+        updateDomWithMessage(data, currentRoom);
       },
       error: function (data) {
         console.error('chatterbox: Failed to retrieve messages');
@@ -89,7 +138,6 @@ var postMessage = function(messageObj) {
       data: JSON.stringify(messageObj),
       contentType: 'application/json',
       success: function (data) {
-        // responseData = data;
         console.log('chatterbox: Message sent');
         $('#inputMessage').val('');
         refreshMessageList();
