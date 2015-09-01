@@ -85,9 +85,27 @@ form input[type=text] {
 
 .messageDiv {
     border: 1px solid black;
-    background-color: gray;
+    background-color: #eee;
+    margin: 5px 0;
+    padding: 5px;
 }
 
 .current {
     background-color: yellow;
+}
+
+.bold-friend {
+    font-weight: bold;
+}
+
+.rooms {
+    list-style: none;
+}
+
+.room {
+    display: inline;
+
+}
+.room > button {
+    margin: 3px;
 }

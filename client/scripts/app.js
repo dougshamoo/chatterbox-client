@@ -1,12 +1,8 @@
 var rooms = [];
 var currentRoom = null;
 var url = 'https://api.parse.com/1/classes/chatterbox';
-var message = {
-  username: 'somebody',
-  text: 'this is a message... boom.',
-  roomname: 'room powerhouse'
-};
 var responseData = null;
+var friends = [];
 
 $(document).ready(function() {
   $('#refreshButton').on('click', function() {
@@ -14,10 +10,14 @@ $(document).ready(function() {
   });
   $('#submitMessage').on('click', function() {
     var text = $('#inputMessage').val();
+    var user = window.location.search;//TODO
+    var roomname = $('#inputRoom').val();
+    var eqIdx = _.indexOf(user, '=');
+    var userStr = user.slice(eqIdx+1);
     postMessage({
-      username: 'the cat',
+      username: userStr,
       text: text,
-      roomname: 'the room'
+      roomname: roomname
     });
   });
   getMessages();
@@ -37,17 +37,11 @@ function escapeHtml(text) {
 
 var updateDomWithMessage = function(data, currentRoom) {
   var results = data.results;
-  // _.filter ,
-  console.log('results before filter');
-  console.log(results);
   if (currentRoom !== null) {
     results = _.filter(results, function(item) {
       return item.roomname===currentRoom;
     });
   }
-  console.log('results after filter');
-  console.log(results);
-
   $('#messageContainer').empty();
 
   _.each(results, function(item, index, coll) {
@@ -66,12 +60,13 @@ var updateDomWithMessage = function(data, currentRoom) {
 
     $('#messageContainer').append(
       '<div class="messageDiv">'+
-        '<p>'+ 'Username: ' + escapedUser+'</p>'+
+        '<p>'+ 'Username: <a class="user" href="#">' + escapedUser + '</a></p>'+
         '<p>' + 'Text: ' +escapedText+'</p>'+
         '<p>' + 'Timestamp: ' + formattedTimestamp + '</p>' +
         '<p>' + 'Room: ' + escapedRoom + '</p>' +
       '</div>');
   });
+  boldFriends();
 };
 
 var updateDomWithRooms = function(data) {
@@ -114,14 +109,29 @@ var getMessages = function() {
           if (currentRoom === $(this).text()) {
             currentRoom = null;
             $(this).removeClass('current');
+            $('#inputRoom').val('');
           }
           else {
             currentRoom = $(this).text();
             $(this).addClass('current');
+            $('#inputRoom').val($(this).text());
           }
           getMessages();
         });
         updateDomWithMessage(data, currentRoom);
+        $('.user').click(function(event) {
+          event.preventDefault();
+          var friend = $(this).text();//val
+          // add them if not in list
+          if(_.indexOf(friends, friend) < 0){
+            friends.push(friend);
+          } else {
+            // remove them if in list
+            friends.splice(_.indexOf(friends, friend), 1);
+          }
+          boldFriends();
+        })
+
       },
       error: function (data) {
         console.error('chatterbox: Failed to retrieve messages');
@@ -129,6 +139,18 @@ var getMessages = function() {
     });
   return ajaxCall;
 }
+
+var boldFriends = function() {
+  var messages = $('.messageDiv');
+  for(var i=0; i<messages.length; i++) {
+    var user = $(messages[i]).find('a').text();
+    if(_.indexOf(friends, user) > -1) {
+      $(messages[i]).addClass('bold-friend');
+    } else {
+      $(messages[i]).removeClass('bold-friend');
+    }
+  }
+};
 
 var postMessage = function(messageObj) {
   var ajaxCall =
@@ -140,6 +162,7 @@ var postMessage = function(messageObj) {
       success: function (data) {
         console.log('chatterbox: Message sent');
         $('#inputMessage').val('');
+        $('#inputRoom').val('');
         refreshMessageList();
       },
       error: function (data) {
